@@ -1,0 +1,55 @@
+.navbar {
+  /* max-width: 1100px;
+  margin: 1.5rem auto 0;
+  padding: 0 2rem;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center; */
+  max-width: 1100px;
+  margin: 1.5rem auto 0;
+  padding: 1rem 2rem;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  /* ✨ Distinct background */
+  background: linear-gradient(
+    145deg,
+    rgba(48, 43, 99, 0.6),
+    rgba(15, 12, 41, 0.85)
+  );
+
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.nav-brand {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #00cb47;
+  text-shadow: 0 0 8px #00cb47;
+  letter-spacing: 1px;
+  text-decoration: none;
+}
+
+.nav-link {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ffffff;
+  text-decoration: none;
+  opacity: 0.85;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  opacity: 1;
+  color: #00cb47;
+  text-shadow: 0 0 6px #00cb47;
+}

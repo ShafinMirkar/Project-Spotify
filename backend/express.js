@@ -1,91 +1,134 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from 'cors';
+import connectDB from "./db/index.js"
+import rateLimit from "express-rate-limit";
 import { GoogleGenAI } from "@google/genai";
-dotenv.config();
+import { registerUser } from "./controller/user.controller.js";
+import isLoggedIn  from "./middleware/isLoggedIn.js";
+import {User} from './models/user.model.js'
 
 const app = express();
+dotenv.config();
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
 const ai = new GoogleGenAI({});
 
-const CLIENT_iD = process.env.CLIENT_ID
-const CLIENT_sECRET = process.env.CLIENT_SECRET
+app.use("/api", limiter);
+app.use(
+  cors({
+    origin: process.env.REDIRECT_URI,
+  })
+);
+app.use(express.json());
+app.use(isLoggedIn);
 
-app.get("/", (_,res)=>{
-  res.send("Helloeeewww")
+const roastLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 4,
+  message: {
+    error: "You’ve already been roasted enough today. Come back tomorrow 🔥",
+  },
+});
+
+app.post("/api/token", async(req,res)=>{
+  const { code, code_verifier } = req.body;
+  if (!code || !code_verifier) {
+    return res.status(400).json({ error: "Missing code or verifier" });
+  }
+
+  const params = new URLSearchParams({
+    client_id: process.env.SPOTIFY_CLIENT_ID,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: process.env.REDIRECT_URI,
+    code_verifier,
+  });
+
+  try {
+  const response = await fetch(
+    "https://accounts.spotify.com/api/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params,
+    }
+  );
+
+  const data = await response.json();
+  const access_token = data.access_token;
+
+  const expiresAt = data.expires_in;
+  const access_token_expires_at = Date.now() + expiresAt * 1000;
+
+  console.log(`Token generated ${access_token}`);
+
+  const userId = await registerUser(access_token,access_token_expires_at);
+  console.log("User id generated -> ",userId);
+  res.json({userId});
+  } catch (error) {
+    console.log("Errrorrrrr", error)
+  }
 })
 
-app.get("/api/token", async(req,res)=>{
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization:
-        "Basic " +
-        Buffer.from(CLIENT_iD + ":" + CLIENT_sECRET).toString("base64"),
-    },
-    body: "grant_type=client_credentials",
-  });
-  const data = await response.json();
-  const token = data.access_token;
-  console.log(`Token generated ${token}`)
-  let allSongs = [];
-  try {
-      const { user_id } = req.query;
-      console.log(`user id  generated ${user_id}`)
-      const playlistsRes = await fetch(
-        `https://api.spotify.com/v1/users/${user_id}/playlists?limit=50`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      const playlists = await playlistsRes.json();
-      console.log(playlists)
-      for (const playlist of playlists.items){
-        const tracksRes = await fetch(
-          `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
+app.get("/api/roast", roastLimiter,async (req, res) => {
+  const { userId } = req.query;
 
-        const tracksData = await tracksRes.json();
+  if (!userId) {
+    return res.status(400).json({ error: "userId missing" });
+  }
 
-        const trackNames = tracksData.items
-          .map(item => item.track?.name)
-          .filter(Boolean);
-
-        allSongs.push({
-          playlistName: playlist.name,
-          tracks: trackNames
-        });
-      }    
-    } catch (error) {
-      console.log("error while fetching playlist", error);
-    }
+  const user = await User.findById(userId);
   
-  console.log(`all songs generated ${allSongs}`)
-  const promptString = allSongs
-  .map(pl => {
-    const tracksText = pl.tracks.map(track => `- ${track}`).join("\n");
-    return `Playlist: ${pl.playlistName}\n${tracksText}`;
-  })
-  .join("\n\n");
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  console.log("Roast request made by ", user.username);
+  const { all_songs, top_tracks, top_artists } = user;
+
+  if (!top_tracks.length || !top_artists.length) {
+    return res.status(400).json({ error: "Not enough data to roast" });
+  }
+
+  const topTracksString = top_tracks
+    .slice(0, 5)
+    .map((t, i) => `${i + 1}. ${t.name} by ${t.artists.join(", ")}`)
+    .join("\n");
+
+  const topArtistsString = top_artists
+    .slice(0, 5)
+    .map((a, i) => `${i + 1}. ${a.name}`)
+    .join("\n");
+
+  const allSongsString = all_songs
+    .slice(0, 10)
+    .map(s => s.name)
+    .join(", ");
 
   const resp = await ai.models.generateContent({
   model: "gemini-2.5-flash",
-  contents: `here is a list of songs playlist \n ${promptString} \n I want you to roast this listener according to his song playlists and his music choice.`,
+  contents: `here is the user's top artists ${topArtistsString} \n here is his top tracks ${topTracksString}\n here is a list of songs playlist \n ${allSongsString} \n  I want you to roast this listener according to his top tracks, top artists, song playlists and his music choice.`,
   config: {
     temperature: 1.2,
-    systemInstruction: "Directly give the roast, dont add any sentences before. dont use any symbols, emojis etc, just plain text. roast each playlist individually. Create a one-liner for each playlist and then a complete roast of the entire playlist. You can get personal. Be brutal.",
+    systemInstruction: "Directly give the roast, dont add any sentences before. You can get personal. Be really really brutal. Make it more street like. dont use any symbols, emojis etc, just plain text.create *only* three mid-size paragraphs of roast one for each, first his playlist, then top tracks then top artists.Make each paragraph of less than 70 words",
   },
   });
   console.log(resp.text);
   res.json({ text: resp.text });
+
 })
 
-app.listen(5000, ()=>{
-    console.log(`App listens on Port: ${5000}`)
+connectDB()
+.then(() => {
+    app.listen(process.env.PORT || 8081, () => {
+        console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
+    })
+})
+.catch((err) => {
+    console.log("MONGO db connection failed", err);
 })

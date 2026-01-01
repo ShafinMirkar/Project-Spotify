@@ -1,38 +1,26 @@
-import { useState } from "react"
+import { Routes, Route } from "react-router-dom";
+import { useEffect, useRef} from "react";
+import { useNavigate } from "react-router-dom";
+import generateCode from './components/generateCode.js';
+import Navbar from './components/Navbar.jsx'
+import Home from './components/Home.jsx';
+import Roast from "./components/Roast.jsx"
+import Login from './components/Login.jsx';
+import Users from './components/Users.jsx'
 import './App.css'
-export default function App() {
-  const [userId, setUserId] = useState();
-  const [roast, setRoast] = useState(null)
-  async function handleSubmit(e){
-    e.preventDefault();
-    try {
-      userId;
-      console.log(userId);
-      const response = await fetch(`/api/token?user_id=${encodeURIComponent(userId)}`);
-      const data= await response.json();
-      console.log(data.text)
-      setRoast(data.text); 
-    } catch (error) {
-      console.log("error while fetching roast", error);
-    }
-    
-  }
-  return (
-    <div className="container">
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="name"
-          placeholder="Enter your user ID"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          required
-        />
-        <button type="submit">Submit</button>
-      </form>
 
-      {roast && <div className="roast-content">{roast}</div>}
-    </div>
+export default function App() {
+  
+  return (
+    <>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login/>} />
+        <Route path="/roast" element={<Roast/>} />
+        <Route path="/users" element={<Users />} />
+      </Routes>
+    </>
   );
 
 }
