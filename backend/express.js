@@ -124,11 +124,13 @@ app.get("/api/roast", roastLimiter,async (req, res) => {
 })
 
 connectDB()
-.then(() => {
-    app.listen(process.env.PORT || 8081, () => {
-        console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
-    })
-})
-.catch((err) => {
-    console.log("MONGO db connection failed", err);
-})
+  .then(() => {
+    const PORT = process.env.PORT || 8081;
+
+    app.listen(PORT, () => {
+      console.log(`⚙️ Server is running at port : ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection failed:", err);
+  });
