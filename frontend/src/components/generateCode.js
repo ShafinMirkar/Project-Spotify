@@ -16,7 +16,8 @@ const generateRandomString = (length) => {
 }
 function requestCode(codeVerifier,codeChallenge){
   const clientId = '3263b6dd22d14acb9bffbf783b6cc12f';
-  const redirectUri = 'http://127.0.0.1:5137';
+  const redirectUri = import.meta.env.VITE_REDIRECT_URI;
+
 
   const scope = 'playlist-read-private playlist-read-collaborative user-top-read user-top-read user-read-private user-read-email';
   const authUrl = new URL("https://accounts.spotify.com/authorize")

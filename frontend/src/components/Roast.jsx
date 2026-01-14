@@ -12,9 +12,8 @@ export default function Roast() {
       const userId = localStorage.getItem("userId");
 
       if(userId===null) navigate("/login");
-
       const res = await apiFetch(
-        `http://localhost:5000/api/roast?userId=${userId}`
+        `${import.meta.env.VITE_API_URL}/api/roast?userId=${userId}`
       );
 
       const data = await res.json();

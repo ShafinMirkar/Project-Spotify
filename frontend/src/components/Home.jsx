@@ -124,7 +124,7 @@ export default function Home() {
   const exchangeStartedRef = useRef(false);
 
   async function getToken(code) {
-    const response = await apiFetch("http://localhost:5000/api/token", {
+    const response = await apiFetch(`${import.meta.env.VITE_API_URL}/api/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
