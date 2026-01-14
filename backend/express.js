@@ -50,14 +50,19 @@ app.post("/api/token", async(req,res)=>{
   if (!code || !code_verifier) {
     return res.status(400).json({ error: "Missing code or verifier" });
   }
+  const redirectUri =
+  process.env.NODE_ENV === "production"
+    ? process.env.PROD_REDIRECT_URI
+    : process.env.DEV_REDIRECT_URI;
 
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID,
     grant_type: "authorization_code",
     code,
-    redirect_uri: process.env.REDIRECT_URI,
+    redirect_uri: redirectUri,
     code_verifier,
   });
+
 
   try {
   const response = await fetch(
