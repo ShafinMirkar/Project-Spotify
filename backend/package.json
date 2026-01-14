@@ -4,8 +4,9 @@
   "main": "express.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon express.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "start": "node express.js",
+  "dev": "nodemon express.js",
+  "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
